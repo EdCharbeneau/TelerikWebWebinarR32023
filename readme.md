@@ -1,7 +1,7 @@
 # Telerik R3 2023 All Things Web Presentation Assets
 
 * /Presentation - Power Point presentation for the webinar
-* /DotnetRC8-Demo - A demo showing Telerik UI for Blazor & MVC running with .NET 8. This app uses MVC/RazorPages/Razor Components in one application.
+* /DotnetRC8-Demo - A demo showing Telerik UI for Blazor & MVC running with .NET 8. This app uses MVC/RazorPages/Razor Components in one application. The demo requires .NET 8 RC2 and Visual Studio Preview. You may need to install your own Telerik UI for ASP.NET Core licensed Kendo UI assets for the app to run without warnings (see lines 13-20 of _Layout.cshtml).
 
 ## Links
 
