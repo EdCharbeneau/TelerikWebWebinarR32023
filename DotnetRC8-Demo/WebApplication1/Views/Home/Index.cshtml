@@ -1,0 +1,291 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+@using  WebApplication1.Views.Home
+
+
+<div class="k-d-flex k-justify-content-center" style="height: 500px;">
+    <kendo-dockmanager name="dockmanager"
+                       on-dock="updateContent"
+                       on-inner-dock="updateContent"
+                       on-close="updateContent"
+                       on-pin="updateContent"
+                       on-unpin="updateContent">
+        <root-pane id="root" type="RootPaneType.Split">
+            <panes>
+                <pane type="PaneType.Content" id="members" closeable="false" title="Members" content="<div class='membersContainer'></div>" size="30%"></pane>
+                <pane id="details" type="PaneType.Split" size="80%" orientation="DockSplitterOrientation.Vertical">
+                    <panes>
+                        <pane id="bio" type="PaneType.Content" title="Biography" content="<div class='biographyContainer'></div>"></pane>
+                        <pane id="content" type="PaneType.Content" title="Representative sale vs Total sale" content="<div class='sales'></div>" size="40%"></pane>
+                        <pane id="files" type="PaneType.Tab" size="30%" title="Tools">
+                            <panes>
+                                <pane title="Monthly Sales" type="PaneType.Content" content="<div class='monthlySales'></div>"></pane>
+                                <pane title="QTD Sales" type="PaneType.Content" content="<div class='qtdSales'></div>"></pane>
+                            </panes>
+                        </pane>
+                    </panes>
+                </pane>
+            </panes>
+        </root-pane>
+    </kendo-dockmanager>
+</div>
+
+<script>
+        const average = array => array.reduce((a, b) => a + b) / array.length;
+        var data, selectedItem;
+
+        var biographyTemplate = (person) => `
+        <div class="content">
+            <div class="div-2">
+                <header class="header">
+                <img class="member-photo" src="https://demos.telerik.com/kendo-ui/content/web/Employees/${person.EmployeeID}.jpg" />
+                <div class="title">
+                    <div class="name">${person.FirstName} ${person.LastName}</div>
+                    <div class="position">${person.Title}</div>
+                </div>
+                </header>
+                <p class="bio">
+                    ${person.Notes}
+                </p>
+            </div>
+        </div>`;
+
+        var montlySalesTemplate = (avg) => `
+        <div class="salesContainer">
+            <div class="average"> ${kendo.toString(avg, "C")}</div>
+            <div id="sparkline"></div>
+        </div>`;
+
+        var qtdSalesTemplate = (avg) => `
+        <div class="salesContainer">
+            <div class="average"> ${kendo.toString(avg, "C")}</div>
+            <div id="qtdSparkline"></div>
+        </div>`;
+
+
+        $(document).ready( function () {
+
+            createListbox();
+            var listbox = $(".membersContainer").last().data("kendoListBox");
+            listbox.one("dataBound", function (e) {
+                var widget = e.sender;
+                $.get({
+                    url: "https://run.mocky.io/v3/c77f754d-0ba3-4af6-8456-2cbb40b4e2cc",
+                    success: function (response) {
+                        data = response;
+                        var itemElement = widget.items().first();
+                        var item = widget.dataItems()[0]
+                        widget.select(e.sender.items().first())
+                        selectedItem = item;
+                        renderContent(item);
+                    }
+                });
+            })
+
+
+        });
+
+        function createListbox() {
+            $(".membersContainer").last().kendoListBox({
+                dataSource: {
+                    type: "odata",
+                    transport: {
+                        read: "https://demos.telerik.com/kendo-ui/service/Northwind.svc/Employees"
+                    },
+                    sort: { field: "FirstName", dir: "asc" },
+                    pageSize: 9
+                },
+                dataTextField: "FirstName",
+                dataValueField: "EmployeeID",
+                template: (data) => `${data.FirstName} ${data.LastName}`,
+                change: function (e) {
+                    var item = e.sender.dataItems()[e.sender.select().index()];
+                    selectedItem = item;
+                    renderContent(item);
+                }
+            })
+            var listBox = $(".membersContainer").last().data("kendoListBox");
+        }
+
+        function updateContent() {
+
+            setTimeout(function () {
+                createListbox();
+                var listbox = $(".membersContainer").last().data("kendoListBox");
+                listbox.one("dataBound", function (e) {
+                    let uid = e.sender.dataItems().filter(f => f.EmployeeID == selectedItem.EmployeeID)[0].uid;
+                    let item = e.sender.wrapper.find("[data-uid='" + uid + "']");
+                    e.sender.select(item);
+                })
+                renderContent(selectedItem);
+            }, 300)
+        };
+
+        function renderContent(dataItem) {
+            var item = dataItem;
+
+            //create sales chart
+            var sales = data.filter(x => x.EmployeeID == item.EmployeeID)[0].Sales.filter(x => new Date(x.Date).getFullYear() == "1997")
+
+            createChart(sales);
+            //render bio
+            var template = kendo.template(biographyTemplate);
+            var result = template(item);
+
+            $(".biographyContainer").last().html(result);
+            //create sales sparkline
+            var salesTemplate = kendo.template(montlySalesTemplate);
+            var avgSales = average(sales.map(x => x.EmployeeSales));
+            var salesResult = salesTemplate(avgSales);
+            $(".monthlySales").last().html(salesResult);
+            $(".sparkline").last().kendoSparkline({
+                data: sales.map(x => x.EmployeeSales)
+            });
+            //create qtd sales sparkline
+            var quarterSalesTemplate = kendo.template(qtdSalesTemplate);
+            var qtdAvgSales = average(sales.splice(-3).map(x => x.EmployeeSales));
+            var qtdSalesResult = quarterSalesTemplate(qtdAvgSales);
+            $(".qtdSales").last().html(qtdSalesResult);
+            $(".qtdSparkline").last().kendoSparkline({
+                type: "bullet",
+                data: [qtdAvgSales, 10000]
+            });
+        };
+
+        function createChart(data) {
+            $(".sales").last().kendoChart({
+                theme: "sass",
+                dataSource: {
+                    data: data
+                },
+                legend: {
+                    position: "top"
+                },
+                seriesDefaults: {
+                    type: "column"
+                },
+                series:
+                    [{
+                        field: "EmployeeSales",
+                        name: "EmployeeSales",
+                        categoryField: "Date"
+                    }, {
+                        field: "TotalSales",
+                        name: "Team Sales",
+                        categoryField: "Date"
+                    }],
+                categoryAxis: {
+                    labels: {
+                        template: "#= kendo.toString(new Date(value),'MMM') #"
+                    },
+                    majorGridLines: {
+                        visible: false
+                    }
+                },
+                valueAxis: {
+                    visible: false
+                },
+                tooltip: {
+                    visible: true,
+                    format: "N0"
+                }
+            });
+        }
+    </script>
+
+<style>
+    #example {
+        min-height: 350px;
+    }
+
+    .biographyContainer {
+        display: flex;
+    }
+
+    .sales {
+        height: 200px;
+    }
+
+    .sparkline, .qtdSparkline {
+        width: 80%;
+        height: 40px;
+    }
+
+    .k-listbox {
+        width: 100%;
+        height: 100%;
+    }
+
+    .k-listbox .k-list-scroller {
+        border-color: transparent;
+    }
+
+    .content {
+        display: flex;
+        align-items: flex-start;
+        padding: 4px;
+        flex: 1;
+        align-self: stretch;
+        width: 100%;
+        flex-grow: 1;
+    }
+
+    .div-2 {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        position: relative;
+        margin-bottom: -3px;
+    }
+
+    .header {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        position: relative;
+        align-self: stretch;
+        width: 100%;
+        flex: 0 0 auto;
+        background-color: transparent;
+    }
+
+    .member-photo {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .title, .average {
+        font-size: large;
+        font-weight: 600;
+    }
+
+    .name {
+        position: relative;
+        flex: 1;
+        align-self: stretch;
+        margin-top: -1px;
+        white-space: nowrap;
+    }
+
+    .position {
+        position: relative;
+        flex: 1;
+        align-self: stretch;
+        font-family: "Roboto", Helvetica;
+        font-weight: 500;
+        font-size: 14px;
+        letter-spacing: 0.25px;
+        line-height: 20px;
+    }
+
+    .bio {
+        position: relative;
+        flex: 1;
+        align-self: stretch;
+    }
+</style>

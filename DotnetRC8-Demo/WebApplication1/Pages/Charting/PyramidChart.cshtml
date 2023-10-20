@@ -1,0 +1,56 @@
+﻿@page 
+@model WebApplication1.Pages.Charting.PyramidChartModel
+@{
+    Layout = "_Layout";
+}
+<div class="configurator">
+    <div class="header">Configurator</div>
+    <div class="box-col">
+        <h4><input type="checkbox" id="dynamicHeight" /><label style="margin-left:5px;" for="dynamicHeight">Dynamic Height</label></h4>
+        <i>The height of the segment is the overall percentage for that dataItem</i>
+    </div>
+</div>
+<div class="demo-section wide">
+     <kendo-chart name="chart">
+        <chart-title text="Sales"></chart-title>
+        <chart-legend visible="false"></chart-legend>
+        <series>
+            <series-item dynamic-height="false" type="ChartSeriesType.Pyramid"
+                   data='new dynamic[]{
+                    new {
+                        category= "Unique Visitors",
+                        value= 280022
+                    },
+                    new {
+                        category= "Downloads",
+                        value= 190374
+                    },
+                    new {
+                        category= "Purchases",
+                        value= 120392
+                    }
+                }'>
+                <labels background="none"></labels>
+            </series-item>
+        </series>
+        <tooltip visible="true" template="#=category# (#=kendo.format('{0:p}', percentage)#)"></tooltip>
+    </kendo-chart>
+</div>
+<script>
+    function refresh() {
+        var chart = $("#chart").data("kendoChart");
+        chart.options.series[0].dynamicHeight = $('#dynamicHeight').is(':checked');
+        chart.redraw();
+    }
+
+    $(document).ready(function() {
+        $('.box-col').on('click', ':checkbox', refresh);
+    });
+</script>
+
+<style>
+    #chart {
+        width: 400px;
+        margin: auto;
+    }
+</style>

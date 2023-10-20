@@ -1,0 +1,14 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using Telerik.Blazor.Components
+@inherits LayoutComponentBase
+<TelerikRootComponent>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </NotFound>
+    </Router>
+</TelerikRootComponent>
